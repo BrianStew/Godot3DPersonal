@@ -1,27 +1,39 @@
-[gd_scene load_steps=5 format=3 uid="uid://cxtsgt8r3253s"]
+[gd_scene load_steps=6 format=3 uid="uid://bw2vd2wcilohk"]
 
-[ext_resource type="Script" uid="uid://dbyypxi2csrv" path="res://scripts/player.gd" id="1_3vyb7"]
+[ext_resource type="Script" uid="uid://dhtgqauxb465w" path="res://scripts/player.gd" id="1_3vyb7"]
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_onrkg"]
-albedo_color = Color(0, 1, 1, 1)
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4flbx"]
+albedo_color = Color(0, 0.67451, 1, 1)
 
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_i3pqv"]
-material = SubResource("StandardMaterial3D_onrkg")
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_onrkg"]
+material = SubResource("StandardMaterial3D_4flbx")
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_hqtel"]
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_i3pqv"]
 
-[node name="Player" type="Node3D"]
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_3vyb7"]
+height = 1.2
+
+[node name="Player" type="CharacterBody3D"]
 script = ExtResource("1_3vyb7")
 
-[node name="CharacterBody3D" type="CharacterBody3D" parent="."]
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+visible = false
+mesh = SubResource("CapsuleMesh_onrkg")
 
-[node name="Mesh" type="MeshInstance3D" parent="CharacterBody3D"]
-mesh = SubResource("CapsuleMesh_i3pqv")
+[node name="Standing_Collision_Shape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CapsuleShape3D_i3pqv")
 
-[node name="Collision" type="CollisionShape3D" parent="CharacterBody3D"]
-shape = SubResource("CapsuleShape3D_hqtel")
+[node name="Crouching_Collision_Shape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+shape = SubResource("CapsuleShape3D_3vyb7")
+disabled = true
 
-[node name="Head" type="Node3D" parent="CharacterBody3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.7, 0)
 
-[node name="Camera3D" type="Camera3D" parent="CharacterBody3D/Head"]
+[node name="Camera3D" type="Camera3D" parent="Head"]
+
+[node name="RayCast3D" type="RayCast3D" parent="."]
+target_position = Vector3(0, 2, 0)
