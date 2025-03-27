@@ -1,8 +1,0 @@
-[gd_scene load_steps=2 format=3 uid="uid://gyjnkwfl5utx"]
-
-[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_7dm0k"]
-
-[node name="Main" type="Node"]
-
-[node name="StaticBody3D" type="StaticBody3D" parent="."]
-physics_material_override = SubResource("PhysicsMaterial_7dm0k")
