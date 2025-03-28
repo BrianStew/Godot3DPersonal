@@ -16,12 +16,11 @@ const CROUCH_SPEED = 3.0
 var current_speed
 var crouch_depth = -0.5
 var lerp_speed = 10.0
+var current_jumps = 0   # For Double-Jumps
 
 # Input Variables
 @export var mouse_sense = 0.25
 var direction = Vector3.ZERO
-
-
 
 func _ready() -> void:
 	# This locks our mouse into the window
@@ -42,7 +41,11 @@ func _input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	# Handle Crouching and Sprinting
 	if Input.is_action_pressed("crouch"):
-		current_speed = CROUCH_SPEED
+		# Attempt at sliding mechanic
+		if current_speed > CROUCH_SPEED:
+			current_speed = lerp(current_speed, CROUCH_SPEED, delta)
+		else:
+			current_speed = CROUCH_SPEED
 		head.position.y = lerp(head.position.y, 1.7 + crouch_depth, delta * lerp_speed)
 		# Here we change our collision size when crouching
 		standing_collision_shape.disabled = true
@@ -61,10 +64,14 @@ func _physics_process(delta: float) -> void:
 	# Add the gravity.
 	if not is_on_floor():
 		velocity += get_gravity() * delta
+	else:
+		# If player is on the ground, set their jump counter to 0
+		current_jumps = 0
 
 	# Handle jump.
-	if Input.is_action_just_pressed("jump") and is_on_floor():
+	if Input.is_action_just_pressed("jump") and current_jumps < 2:
 		velocity.y = JUMP_VELOCITY
+		current_jumps += 1
 
 	# Get the input direction and handle the movement/deceleration.
 	# As good practice, you should replace UI actions with custom gameplay actions.
