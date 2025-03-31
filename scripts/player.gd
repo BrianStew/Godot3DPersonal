@@ -3,10 +3,13 @@ extends CharacterBody3D
 # Player Nodes
 @onready var head: Node3D = $Neck/Head
 @onready var neck: Node3D = $Neck
+@onready var eyes: Node3D = $Neck/Head/Eyes
+
 @onready var standing_collision_shape: CollisionShape3D = $Standing_Collision_Shape
 @onready var crouching_collision_shape: CollisionShape3D = $Crouching_Collision_Shape
 @onready var ray_cast_3d: RayCast3D = $RayCast3D
-@onready var camera_3d: Camera3D = $Neck/Head/Camera3D
+@onready var camera_3d: Camera3D = $Neck/Head/Eyes/Camera3D
+
 
 # Speed Variables
 const JUMP_VELOCITY = 4.5
@@ -14,8 +17,21 @@ const WALK_SPEED = 5.0
 const SPRINT_SPEED = 8.0
 const CROUCH_SPEED = 3.0
 
+# Head Bobbing Variables
+const HEAD_BOBBING_SPRINT_SPEED = 20.0 
+const HEAD_BOBBING_WALK_SPEED = 11.0 
+const HEAD_BOBBING_CROUCH_SPEED = 9.0 
+
+const HEAD_BOBBING_SPRINT_INTENSITY = 0.17
+const HEAD_BOBBING_WALK_INTENSITY = 0.08
+const HEAD_BOBBING_CROUCH_INTENSITY = 0.04
+
+var head_bobbing_vector = Vector2.ZERO
+var head_bobbing_index = 0.0
+var head_bobbing_current_intensity = 0.0
+
 # Movement Variables
-var current_speed
+var current_speed = 0.0
 var crouch_depth = -0.5
 var lerp_speed = 10.0
 var free_look_tilt_amount = 7.5
@@ -74,7 +90,10 @@ func _physics_process(delta: float) -> void:
 
 	# Handle Crouching, Sprinting and Sliding
 	if Input.is_action_pressed("crouch") || sliding:
+		
+		# If crouching in the air, maintain current velocity
 		current_speed = CROUCH_SPEED
+			
 		head.position.y = lerp(head.position.y, crouch_depth, delta * lerp_speed)
 		
 		# Here we change our collision size when crouching
@@ -82,7 +101,7 @@ func _physics_process(delta: float) -> void:
 		crouching_collision_shape.disabled = false
 		
 		# Handle Sliding Begin
-		if sprinting && input_dir != Vector2.ZERO:
+		if sprinting && input_dir != Vector2.ZERO && is_on_floor():
 			sliding = true
 			freelooking = true
 			slide_timer = slide_timer_max
@@ -122,14 +141,16 @@ func _physics_process(delta: float) -> void:
 		
 		# Slide Cancel
 		sliding = false
-		freelooking = false
-		slide_timer = 0.0
 		
 	# Handle FreeLooking
 	if Input.is_action_pressed("free_look") || sliding:
 		freelooking = true
+		
 		# Add tilt when freelooking
-		camera_3d.rotation.z = -deg_to_rad(neck.rotation.y * free_look_tilt_amount)
+		if sliding:
+			camera_3d.rotation.z = lerp(camera_3d.rotation.z, -deg_to_rad(7.0), delta*lerp_speed)
+		else:
+			camera_3d.rotation.z = -deg_to_rad(neck.rotation.y * free_look_tilt_amount)
 	else:
 		freelooking = false
 		# Reset the rotation of neck to look forward and camera to look straight
@@ -144,6 +165,30 @@ func _physics_process(delta: float) -> void:
 			freelooking = false
 			sliding = false
 	
+	# Head Bobbing
+	if sprinting:
+		head_bobbing_current_intensity = HEAD_BOBBING_SPRINT_INTENSITY
+		head_bobbing_index += HEAD_BOBBING_SPRINT_SPEED*delta
+	elif walking:
+		head_bobbing_current_intensity = HEAD_BOBBING_WALK_INTENSITY
+		head_bobbing_index += HEAD_BOBBING_WALK_SPEED*delta
+	elif crouching:
+		head_bobbing_current_intensity = HEAD_BOBBING_CROUCH_INTENSITY
+		head_bobbing_index += HEAD_BOBBING_CROUCH_SPEED*delta
+	
+	# We only want to headbob on floor when moving
+	if is_on_floor() && !sliding && input_dir != Vector2.ZERO:
+		# For every side to side, we go up and down twice
+		head_bobbing_vector.y = sin(head_bobbing_index)
+		head_bobbing_vector.x = sin(head_bobbing_index/2) + 0.5
+		
+		eyes.position.y = lerp(eyes.position.y, head_bobbing_vector.y*(head_bobbing_current_intensity/2), lerp_speed*delta)
+		eyes.position.x = lerp(eyes.position.x, head_bobbing_vector.x*(head_bobbing_current_intensity), lerp_speed*delta)
+	else:
+		# Reset eyes if not head bobbing
+		eyes.position.y = lerp(eyes.position.y, 0.0, lerp_speed*delta)
+		eyes.position.x = lerp(eyes.position.x, 0.0, lerp_speed*delta)
+	
 	# We implement the lerp function to negate the snappy movement, allowing the player to come to a gradual stop and start
 	# To use lerp, lerp(value we want to lerp, the value we want to lerp it to, the speed of the lerp)
 	direction = lerp(direction, (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized(), delta * lerp_speed)
@@ -155,7 +200,7 @@ func _physics_process(delta: float) -> void:
 	if direction:
 		velocity.x = direction.x * current_speed
 		velocity.z = direction.z * current_speed
-		
+			
 		# Set Velocity if Sliding
 		if sliding:
 			velocity.x = direction.x * (slide_timer + 0.3) * slide_speed
